@@ -248,24 +248,25 @@ void picture_menu() {
     // if you don't do that, you'll destroy the image...
     while (true) {
         delay_ms(200);
-         if (button_down()==0) {
+         if (!button_down()) {
             or_filter(bmp_pointer);
              reset_pixel_data(bmp_pointer);
              display_draw_image_data(get_pxl_data(bmp_pointer), DISPLAY_WIDTH, DISPLAY_HEIGHT);
                  log_info("pressinf down");delay_ms(200);
-        } if (button_left()==0) {
+        } if (!button_left()) {
             remove_color_channel(BLUE_CHANNEL, bmp_pointer);
             display_draw_image_data(get_pxl_data(bmp_pointer), DISPLAY_WIDTH, DISPLAY_HEIGHT);
             reset_pixel_data(bmp_pointer);delay_ms(200);
-        } if (button_up()== 0) {
+        } if (!button_up()) {
             remove_color_channel(GREEN_CHANNEL, bmp_pointer);
             display_draw_image_data(get_pxl_data(bmp_pointer), DISPLAY_WIDTH, DISPLAY_HEIGHT);
             reset_pixel_data(bmp_pointer);delay_ms(200);
-        } if (button_right()==0) {
+        } if (!button_right()) {
             remove_color_channel(RED_CHANNEL, bmp_pointer);
             display_draw_image_data(get_pxl_data(bmp_pointer), DISPLAY_WIDTH, DISPLAY_HEIGHT);
             reset_pixel_data(bmp_pointer);delay_ms(200);
-        } if (button_center ()==0){
+        } if (!button_center()){
+            delay_ms(2);
             break;
         }
         display_draw_image_data(get_pxl_data(bmp_pointer), DISPLAY_WIDTH, DISPLAY_HEIGHT);
