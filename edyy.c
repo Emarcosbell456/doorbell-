@@ -214,12 +214,12 @@ int main(void) {
     int numEntries = get_entries(VIEWER_FOLDER, entries);
     // Everything inside this loop will repeat until 'Ctrl-C' is pressed in the terminal.
     int selected = 0;
-    draw_menu(entries, numEntries, selected);
     
+    draw_menu(entries, numEntries, selected);
     while (true) {
         //delay rapid fire changes
-        delay_ms(200);
-
+        
+delay_ms(100);
         if (button_up() == 0) {
             // Do something upon detecting button press
             // This statement makes sure that selected stays in the range [0, NUM_ENTRIES)
@@ -242,11 +242,9 @@ int main(void) {
         //RIGHT
         if (button_right() == 0) {
            draw_file(VIEWER_FOLDER, entries[selected]);
-            }
-            
-            delay_ms(2000);
-            draw_menu(entries, numEntries, selected);
+        }
         } 
+        
         return 0;
     }
    
