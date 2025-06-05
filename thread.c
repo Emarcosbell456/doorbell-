@@ -426,3 +426,143 @@ int main(void) {
    
 /////////////////////////////////////////
 //////////////////////////////////////////
+#include <arpa/inet.h>
+#include <errno.h>
+#include <getopt.h>
+#include <netdb.h>
+#include <netinet/in.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <unistd.h>
+
+#include "client.h"
+#include "log.h"
+
+int client_connect(const Config *config) {
+    // Sets up structs for address info of specified hostname/port pair
+    log_info("Connecting to server...");
+    struct addrinfo hints, *result, *rp;
+    int sockfd = -1;
+    int status;
+
+    // Sets the IP version to unspecified to be version neutral and the socket type to TCP
+    memset(&hints, 0, sizeof(struct addrinfo));
+    hints.ai_family = AF_UNSPEC;     // Either IPv4 or IPv6
+    hints.ai_socktype = SOCK_STREAM; // TCP
+
+    // Checks to see if there is correct address info for hostname/port pair
+    if ((status = getaddrinfo(config->host, config->port, &hints, &result)) != 0) {
+        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(status));
+        exit(EXIT_FAILURE);
+    }
+
+    // Loops through linked list pairs of info to establish a valid socket
+    for (rp = result; rp != NULL; rp = rp->ai_next) {
+        sockfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+
+        // Socket incorrect
+        if (sockfd < 0) {
+            printf(strerror(ENOTCONN));
+            continue;
+        }
+
+        // Checks to see if connection is valid
+        if (connect(sockfd, rp->ai_addr, rp->ai_addrlen) != -1) {
+            log_info("Connection established");
+            break;
+        } else {
+            printf(strerror(ETIMEDOUT));
+            close(sockfd);
+        }
+    }
+
+    freeaddrinfo(result); // free the linked list
+    if (sockfd == -1) {
+        printf("could not establish connection with TCP server\n");
+        exit(EXIT_FAILURE);
+    }
+    return sockfd;
+}
+
+void client_send_image(int sockfd, const Config *config) {
+    // IMPLEMENT THIS FUNCTION
+    //get homework ID size
+    uint32_t homeworkIDSize = strlen(config->hw_id);
+    //get img_size
+    uint32_t imgSize = config->payload_size;
+    //total buffer is size of homework ID + img
+    uint32_t dataSize = homeworkIDSize + imgSize;
+    //allocate a buffer of dataSize to store the data to be sent
+    uint8_t *data = malloc(dataSize);
+    //There are multiple ways to do this, but the end result should
+    //be a buffer with homweworkID and the image concatenated to each other
+    memcpy(data, config->hw_id, homeworkIDSize);
+    memcpy(data + homeworkIDSize, config->payload, imgSize);
+
+    /*
+    * When sending data through a TCP socket, the send function tries to send
+    * all the data, and returns the number of packets successfully sent. Therefore,
+    * a tally must be kept in a loop of which packets were sent, such that the next
+    * iteration of the loop begins where the previous one ended.
+    * 
+    * Example: a message of 1000 bytes given to send() which then returns 500. This 
+    * means that on the next iteration of the loop we should begin at byte 501. send()
+    * then returns 300. This means that on the next iteration of the loop we should start
+    * at byte 801. Finally, send() returns 200. This means we should exit the loop, because
+    * 500 + 300 + 200 = 1000, meaning our whole message has been sent.
+    */
+    uint32_t totalSent = 0;
+
+    uint32_t iterations = 0;
+    log_set_level(LOG_DEBUG);
+    uint32_t numSent = 0;
+    while (totalSent < dataSize) {
+        numSent = send(sockfd, data + totalSent, dataSize - totalSent, 0);
+
+        if (numSent == 0) {
+            log_error("Error sending data");
+            return;
+        }
+        totalSent += numSent;
+        char result[128] = "dummy";
+        iterations++;
+        sprintf(result, "Iteration %d sent %d bytes\n\t%d of %d bytes sent", iterations, numSent,
+                totalSent, dataSize);
+        log_debug(result);
+    }
+
+    /*
+    * DO NOT FORGET TO FREE BUFFERS!
+    * this is why you check to make the camera works more than once.
+    * Memory overflows / crashes are common when students forget or
+    * incorrectly free memory.
+    */
+    free(data);
+    log_info("Picture sent");
+    return;
+}
+/*
+* This function is much less complicated
+* the sever will always send a response - students should log or print it.
+* if their code doesn't work, the output from the server is usually a good
+* hint at what is wrong. For example, not a valid BMP probably means 
+* they wrote the HW ID on top of the beginning of their BMP file instead of 
+* concatenating them.
+*/
+
+void client_receive_response(int sockfd) {
+    uint8_t buf[101];
+    int num_recv = recv(sockfd, buf, 100, 0);
+    buf[num_recv] = '\0';
+
+    printf("Response from server: %s\n", buf);
+}
+
+void client_close(int sockfd) {
+    close(sockfd);// IMPLEMENT THIS FUNCTION
+}
+
